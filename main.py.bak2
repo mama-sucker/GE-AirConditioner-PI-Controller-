@@ -1,0 +1,136 @@
+from flask import Flask, render_template, jsonify, request
+import RPi.GPIO as GPIO
+import threading
+import time
+from datetime import datetime, time as dtime
+import logging
+import os
+
+# [Keep all your existing imports and GPIO setup code]
+
+# [Keep your existing ACController class]
+
+# [Keep your existing ac = ACController() initialization]
+
+# [Keep your existing root route]
+@app.route('/')
+def home():
+    try:
+        return render_template('index.html', 
+                             current_mode=ac.current_mode,
+                             start_time=ac.start_time or "20:00",
+                             end_time=ac.end_time or "06:00",
+                             schedule_enabled=ac.schedule_enabled)
+    except Exception as e:
+        logger.error(f"Error rendering template: {str(e)}")
+        return f"Error loading page: {str(e)}", 500
+
+# Add all these new routes here
+@app.route('/api/fan', methods=['POST'])
+def set_fan():
+    try:
+        speed = request.form.get('speed')
+        ac.set_fan_mode(speed)
+        return jsonify({
+            'status': 'success',
+            'current_mode': ac.current_mode,
+            'cycle_status': 'Running' if ac.is_running else 'Stopped'
+        })
+    except Exception as e:
+        logger.error(f"Error setting fan mode: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cool', methods=['POST'])
+def set_cooling():
+    try:
+        speed = request.form.get('speed')
+        ac.set_cooling_mode(speed)
+        return jsonify({
+            'status': 'success',
+            'current_mode': ac.current_mode,
+            'cycle_status': 'Running' if ac.is_running else 'Stopped'
+        })
+    except Exception as e:
+        logger.error(f"Error setting cooling mode: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/off', methods=['POST'])
+def turn_off():
+    try:
+        ac.turn_off()
+        return jsonify({
+            'status': 'success',
+            'current_mode': ac.current_mode,
+            'cycle_status': 'Stopped'
+        })
+    except Exception as e:
+        logger.error(f"Error turning off: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cycle/start', methods=['POST'])
+def start_cycle():
+    try:
+        ac.start_cycle()
+        return jsonify({
+            'status': 'success',
+            'current_mode': ac.current_mode,
+            'cycle_status': 'Running'
+        })
+    except Exception as e:
+        logger.error(f"Error starting cycle: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cycle/stop', methods=['POST'])
+def stop_cycle():
+    try:
+        ac.stop_cycle()
+        return jsonify({
+            'status': 'success',
+            'current_mode': ac.current_mode,
+            'cycle_status': 'Stopped'
+        })
+    except Exception as e:
+        logger.error(f"Error stopping cycle: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    try:
+        return jsonify({
+            'current_mode': ac.current_mode,
+            'cycle_status': 'Running' if ac.is_running else 'Stopped',
+            'schedule_enabled': ac.schedule_enabled,
+            'start_time': ac.start_time,
+            'end_time': ac.end_time
+        })
+    except Exception as e:
+        logger.error(f"Error getting status: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/schedule', methods=['POST'])
+def set_schedule():
+    try:
+        data = request.get_json()
+        ac.start_time = data.get('start_time')
+        ac.end_time = data.get('end_time')
+        ac.schedule_enabled = data.get('enabled', False)
+        return jsonify({
+            'status': 'success',
+            'schedule_enabled': ac.schedule_enabled,
+            'start_time': ac.start_time,
+            'end_time': ac.end_time
+        })
+    except Exception as e:
+        logger.error(f"Error in schedule API: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Keep your main block
+if __name__ == '__main__':
+    try:
+        logger.info("Starting AC Control System")
+        ac.start_scheduler()
+        app.run(host='0.0.0.0', port=5000, debug=True)
+    except Exception as e:
+        logger.error(f"Error starting application: {str(e)}")
+    finally:
+        GPIO.cleanup()

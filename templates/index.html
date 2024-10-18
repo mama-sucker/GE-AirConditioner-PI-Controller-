@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- [Keep your existing head content] -->
+    <style>
+        /* [Keep your existing styles] */
+        .logout-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .logout-button:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
+
+    <!-- [Keep your existing status and button groups] -->
+
+    <div class="button-group">
+        <h2>System Control</h2>
+        <button onclick="turnOff()">Turn Off</button>
+        <button onclick="toggleCycle()">Start 30/30 Cycle</button>
+        <div style="margin-top: 10px;">
+            <select id="cycle-mode" onchange="updateCycleSettings()">
+                <option value="COOL" {% if cycle_mode == 'COOL' %}selected{% endif %}>Cooling</option>
+                <option value="FAN" {% if cycle_mode == 'FAN' %}selected{% endif %}>Fan Only</option>
+            </select>
+            <select id="cycle-speed" onchange="updateCycleSettings()">
+                <option value="LOW" {% if cycle_fan_speed == 'LOW' %}selected{% endif %}>Low</option>
+                <option value="MED" {% if cycle_fan_speed == 'MED' %}selected{% endif %}>Medium</option>
+                <option value="HIGH" {% if cycle_fan_speed == 'HIGH' %}selected{% endif %}>High</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- [Keep your existing schedule controls] -->
+
+    <script>
+        // [Keep your existing JavaScript functions]
+
+        function updateCycleSettings() {
+            const data = {
+                mode: document.getElementById('cycle-mode').value,
+                speed: document.getElementById('cycle-speed').value
+            };
+            
+            $.ajax({
+                url: '/api/cycle/settings',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    console.log('Cycle settings updated:', response);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

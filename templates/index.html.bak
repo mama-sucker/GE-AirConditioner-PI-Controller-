@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AC Control Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .button-group {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #status {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .schedule-controls {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">
+        <h2>Status</h2>
+        Current Mode: <span id="current-mode">OFF</span><br>
+        Cycle Status: <span id="cycle-status">Stopped</span>
+    </div>
+
+    <div class="button-group">
+        <h2>Fan Only</h2>
+        <button onclick="setMode('fan', 'LOW')">Low</button>
+        <button onclick="setMode('fan', 'MED')">Medium</button>
+        <button onclick="setMode('fan', 'HIGH')">High</button>
+    </div>
+
+    <div class="button-group">
+        <h2>Cooling</h2>
+        <button onclick="setMode('cool', 'LOW')">Low</button>
+        <button onclick="setMode('cool', 'MED')">Medium</button>
+        <button onclick="setMode('cool', 'HIGH')">High</button>
+    </div>
+
+    <div class="button-group">
+        <h2>System Control</h2>
+        <button onclick="turnOff()">Turn Off</button>
+        <button onclick="toggleCycle()">Start 30/30 Cycle</button>
+    </div>
+
+    <div class="schedule-controls">
+        <h2>Daily Schedule</h2>
+        <div>
+            <input type="checkbox" id="schedule-enabled" onchange="updateSchedule()">
+            <label for="schedule-enabled">Enable Schedule</label>
+        </div>
+        <div style="margin-top: 10px;">
+            <label for="start-time">Start Time:</label>
+            <input type="time" id="start-time" onchange="updateSchedule()">
+            <label for="end-time">End Time:</label>
+            <input type="time" id="end-time" onchange="updateSchedule()">
+        </div>
+    </div>
+
+    <script>
+        function setMode(type, speed) {
+            const endpoint = type === 'fan' ? '/api/fan' : '/api/cool';
+            $.post(endpoint, { speed: speed }, function(response) {
+                updateStatus(response);
+            });
+        }
+
+        function turnOff() {
+            $.post('/api/off', function(response) {
+                updateStatus(response);
+            });
+        }
+
+        function toggleCycle() {
+            const currentStatus = $('#cycle-status').text();
+            const endpoint = currentStatus === 'Running' ? '/api/cycle/stop' : '/api/cycle/start';
+            $.post(endpoint, function(response) {
+                updateStatus(response);
+            });
+        }
+
+        function updateSchedule() {
+            const data = {
+                enabled: $('#schedule-enabled').prop('checked'),
+                start_time: $('#start-time').val(),
+                end_time: $('#end-time').val()
+            };
+            $.ajax({
+                url: '/api/schedule',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    console.log('Schedule updated:', response);
+                }
+            });
+        }
+
+        function updateStatus(response) {
+            if (response.current_mode) {
+                $('#current-mode').text(response.current_mode);
+            }
+            if (response.cycle_status) {
+                $('#cycle-status').text(response.cycle_status);
+            }
+        }
+
+        // Initialize schedule controls
+        $(document).ready(function() {
+            $.get('/api/status', function(response) {
+                updateStatus(response);
+                $('#schedule-enabled').prop('checked', response.schedule_enabled);
+                $('#start-time').val(response.start_time || '20:00');
+                $('#end-time').val(response.end_time || '06:00');
+            });
+        });
+    </script>
+</body>
+</html>
